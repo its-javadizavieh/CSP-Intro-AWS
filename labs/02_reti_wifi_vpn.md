@@ -40,19 +40,61 @@ Un’organizzazione usa SSID separati per dipendenti e ospiti. Un dipendente rem
 
 ### Windows: raccogliere dati e interpretare l’errore WLAN
 
+**Eseguire un blocco alla volta, nell’ordine indicato, nella stessa finestra PowerShell.** Copiare tutta la riga e premere Invio. Anche se una riga lunga va a capo sullo schermo, è un unico comando: includere tutte le parti separate da `|`. Alcuni comandi salvano dati senza mostrare un risultato a video; se ricompare il prompt senza errori, passare al successivo.
+
 Aprire **PowerShell** normale. Preparare la cartella Documenti, anche se reindirizzata su OneDrive. I comandi seguenti presumono che la VPN sia disconnessa; se deve restare attiva, sostituire `configurazione-senza-vpn.txt` con `configurazione-attuale.txt` e usare il caso sintetico per il confronto:
+
+Impostare il percorso della cartella di lavoro:
 
 ```powershell
 $lab = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'lab02-wifi-vpn'
+```
+
+Creare la cartella, se non esiste già:
+
+```powershell
 New-Item -ItemType Directory -Path $lab -Force | Out-Null
+```
+
+Entrare nella cartella di lavoro:
+
+```powershell
 Set-Location $lab
-if (-not (Test-Path 'consegna02.md')) {
-    New-Item -ItemType File -Path 'consegna02.md' | Out-Null
-}
+```
+
+Creare il file della consegna solo se non esiste già:
+
+```powershell
+if (-not (Test-Path 'consegna02.md')) { New-Item -ItemType File -Path 'consegna02.md' | Out-Null }
+```
+
+Visualizzare le schede di rete e il loro stato:
+
+```powershell
 Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed
+```
+
+Salvare la configurazione IP nel file indicato (sostituisce il contenuto precedente):
+
+```powershell
 Get-NetIPConfiguration | Format-List * | Out-File configurazione-senza-vpn.txt -Encoding utf8
+```
+
+Aggiungere le rotte allo stesso file, conservando la configurazione IP già salvata:
+
+```powershell
 Get-NetRoute | Format-Table -AutoSize | Out-String -Width 240 | Out-File configurazione-senza-vpn.txt -Append -Encoding utf8
+```
+
+Salvare il risultato dell’interrogazione Wi-Fi, compresi eventuali messaggi di errore:
+
+```powershell
 netsh wlan show interfaces 2>&1 | Out-File wifi.txt -Encoding utf8
+```
+
+Leggere il file appena salvato:
+
+```powershell
 Get-Content wifi.txt
 ```
 
@@ -62,9 +104,21 @@ Get-Content wifi.txt
 
 **Se compare “Il servizio Configurazione automatica wireless (wlansvc) non è in esecuzione”:** Windows segnala che il servizio che gestisce le connessioni WLAN non è avviato. Questo caso è distinto dal consenso alla posizione: aprire la pagina Posizione non avvia il servizio. Verificare senza modificare il sistema:
 
+Controllare lo stato del servizio WLAN:
+
 ```powershell
 Get-Service -Name WlanSvc | Select-Object Name, Status, StartType
+```
+
+Visualizzare le schede fisiche riconosciute da Windows:
+
+```powershell
 Get-NetAdapter -Physical | Select-Object Name, InterfaceDescription, Status, LinkSpeed
+```
+
+Visualizzare la configurazione IP delle connessioni disponibili:
+
+```powershell
 Get-NetIPConfiguration
 ```
 
@@ -113,9 +167,21 @@ tracert -d example.com 2>&1 | Out-File percorso-senza-vpn.txt -Encoding utf8
 
 Dopo aver connesso esclusivamente la VPN già autorizzata:
 
+Salvare la configurazione IP nel file indicato (sostituisce il contenuto precedente):
+
 ```powershell
 Get-NetIPConfiguration | Format-List * | Out-File configurazione-con-vpn.txt -Encoding utf8
+```
+
+Aggiungere le rotte allo stesso file, conservando la configurazione IP già salvata:
+
+```powershell
 Get-NetRoute | Format-Table -AutoSize | Out-String -Width 240 | Out-File configurazione-con-vpn.txt -Append -Encoding utf8
+```
+
+Salvare il percorso verso example.com con la VPN connessa:
+
+```powershell
 tracert -d example.com 2>&1 | Out-File percorso-con-vpn.txt -Encoding utf8
 ```
 
