@@ -6,9 +6,4 @@
 !/labs/
 /labs/*
 !/labs/01_fondamenti_networking.md
-# !/labs/02_reti_wifi_vpn.md
-# !/labs/03_simulazione_protocolli_rete.md
-# !/labs/04_fondamenti_cloud_computing.md
-# !/labs/05_classificazione_servizi_cloud.md
-# !/labs/06_immagini_container_registri.md
-# !/labs/07_dockerfile_networking_kubernetes.md
+!/labs/02_reti_wifi_vpn.md
