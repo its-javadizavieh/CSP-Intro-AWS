@@ -10,7 +10,7 @@ Raccogliere parametri Wi-Fi, progettare la separazione tra rete interna e ospiti
 
 ## Prerequisiti
 
-Computer con Wi-Fi; su Windows usare PowerShell normale (non è richiesta l’esecuzione come amministratore). Se i dettagli Wi-Fi sono bloccati, usare il percorso alternativo descritto sotto. La VPN è opzionale e deve essere già autorizzata e configurata dall’organizzazione: non creare account, certificati o tunnel. Cartella di lavoro `Documenti/lab02-wifi-vpn`.
+Computer con Wi-Fi oppure collegato via Ethernet (in questo caso analizzare i parametri radio sintetici); su Windows usare PowerShell normale (non è richiesta l’esecuzione come amministratore). Se i dettagli Wi-Fi sono bloccati, usare il percorso alternativo descritto sotto. La VPN è opzionale e deve essere già autorizzata e configurata dall’organizzazione: non creare account, certificati o tunnel. Cartella di lavoro `Documenti/lab02-wifi-vpn`.
 
 ## Scenario
 
@@ -21,7 +21,7 @@ Un’organizzazione usa SSID separati per dipendenti e ospiti. Un dipendente rem
 1. Creare `Documenti/lab02-wifi-vpn/consegna02.md` e aprire il terminale nella cartella di lavoro; su Windows seguire i comandi dello svolgimento guidato. Eseguire solo i passi relativi al proprio sistema operativo.
 2. Ubuntu: aprire `Impostazioni -> Wi-Fi -> Ingranaggio della rete connessa`; annotare SSID, intensità segnale, frequenza, velocità collegamento, IPv4, gateway e DNS disponibili.
 3. macOS: tenere premuto `Option` e selezionare l’icona Wi-Fi; annotare SSID, BSSID, canale, RSSI, rumore, Tx Rate e standard PHY. Non riportare il BSSID nella consegna pubblica.
-4. Windows: seguire il percorso guidato sotto: raccogliere configurazione IP e dati visibili nelle Impostazioni, poi provare `netsh wlan show interfaces`. Se compare la richiesta di posizione o l’errore 5, documentare il limite e proseguire con il percorso alternativo; non è necessario sbloccare il comando per completare il lab.
+4. Windows: seguire il percorso guidato sotto: raccogliere configurazione IP e dati visibili nelle Impostazioni, poi provare `netsh wlan show interfaces`. Se compare la richiesta di posizione, l’errore 5 o il messaggio che `wlansvc` non è in esecuzione, documentare il limite e proseguire con il percorso alternativo; non è necessario sbloccare il comando per completare il lab.
 5. Ubuntu, se NetworkManager è disponibile: `nmcli -f ACTIVE,SSID,SIGNAL,CHAN,RATE,SECURITY dev wifi > wifi.txt`.
 6. macOS: salvare manualmente in `wifi.txt` i valori mostrati dal menu diagnostico; non eseguire scansioni aggressive.
 7. In `consegna02.md`, creare la tabella `Parametro | Valore | Fonte`: SSID anonimizzato, banda `2.4/5/6 GHz`, canale, intensità, metodo di sicurezza, IPv4, gateway e DNS. Indicare la fonte (comando, Impostazioni o caso sintetico); per i dati reali non leggibili scrivere `non disponibile`, senza inventare misure.
@@ -60,14 +60,32 @@ Get-Content wifi.txt
 
 **Se `netsh` funziona:** annotare i valori disponibili nella tabella della consegna.
 
+**Se compare “Il servizio Configurazione automatica wireless (wlansvc) non è in esecuzione”:** Windows segnala che il servizio che gestisce le connessioni WLAN non è avviato. Questo caso è distinto dal consenso alla posizione: aprire la pagina Posizione non avvia il servizio. Verificare senza modificare il sistema:
+
+```powershell
+Get-Service -Name WlanSvc | Select-Object Name, Status, StartType
+Get-NetAdapter -Physical | Select-Object Name, InterfaceDescription, Status, LinkSpeed
+Get-NetIPConfiguration
+```
+
+- `Status = Stopped` significa servizio fermo; `Running` significa in esecuzione. `StartType` descrive il tipo di avvio, non lo stato attuale. Se il servizio non viene trovato o la lettura è negata, annotare il messaggio e proseguire con il caso sintetico.
+- Osservare quali schede fisiche Windows riconosce e quale ha configurazione IP e gateway. Il servizio fermo **non dimostra l’assenza della scheda Wi-Fi**; una scheda non elencata può anche avere un problema di driver. Non dedurre la presenza dell’hardware dal solo errore di `netsh`.
+- Se si sta usando Ethernet, raccogliere IPv4, gateway e DNS di quella scheda indicando `Fonte: Ethernet reale`. Una connessione cablata può funzionare anche con `WlanSvc` fermo. Proseguire con schema e confronto VPN sulla connessione disponibile.
+- Conservare il messaggio in `wifi.txt`, aggiungere manualmente lo stato del servizio e annotare `Parametri radio reali non disponibili: servizio WLAN fermo`. Usare per la parte Wi-Fi il caso sintetico riportato sotto, separato dai dati Ethernet. Non è necessario avviare il servizio per completare il lab; eventuali interventi sul PC dell’aula spettano al docente o al supporto tecnico.
+
+**Se `netsh` segnala che non sono presenti interfacce wireless:** annotarlo e usare lo stesso percorso Ethernet + caso sintetico. È possibile, per esempio, che si stia lavorando su un PC senza Wi-Fi o in una macchina virtuale che espone solo Ethernet.
+
+**Se nel file compare `non ├¿` ma a video compare `non è`:** è un problema di codifica del testo salvato, distinto dallo stato del servizio. In PowerShell `cat` è un alias di `Get-Content`: legge il file già creato e non ripete la diagnosi. Eseguire `netsh wlan show interfaces` a video per leggere il messaggio corrente e, se necessario, trascriverlo correttamente in `wifi.txt`. Salvare in UTF-8 non ripara caratteri già decodificati male.
+
 **Se compare “autorizzazione di posizione” / `WlanQueryInterface` errore 5:** il sistema sta negando l’accesso ad alcune informazioni WLAN. I dati sulle reti vicine possono essere usati per ricavare la posizione. Il messaggio non dimostra che la scheda sia guasta, che la password Wi-Fi sia sbagliata o che Internet non funzioni. L’esecuzione come amministratore non sostituisce il consenso alla posizione.
 
 1. Conservare il messaggio in `wifi.txt` e annotare nella consegna: `Interrogazione WLAN bloccata dai permessi; connettività da verificare separatamente`.
 2. Aprire `Impostazioni -> Rete e Internet -> Wi-Fi`, quindi le proprietà della rete connessa o `Proprietà hardware` (le voci variano con la versione). Trascrivere in `wifi.txt` i valori disponibili, senza BSSID/MAC; mantenere il messaggio già salvato. Per i campi mancanti scrivere `non disponibile`.
 3. Completare comunque indirizzo IP, gateway e DNS usando la configurazione salvata. Non dedurre banda, canale o sicurezza dal solo indirizzo IP.
-4. Per esercitarsi sui parametri radio mancanti, analizzare **separatamente** questo caso sintetico: SSID `LAB-DIPENDENTI`, banda `5 GHz`, canale `36`, segnale `78%`, autenticazione `WPA2-Enterprise`, velocità collegamento `433 Mbit/s`. Non presentarlo come misurazione del proprio PC. La percentuale del segnale non è un valore RSSI in dBm.
 
-**Facoltativo, solo se consentito sul dispositivo:** aprire la pagina Posizione con:
+**Caso Wi-Fi sintetico comune (permessi bloccati, servizio fermo o Wi-Fi assente):** per esercitarsi sui parametri radio mancanti, analizzare **separatamente** questo caso sintetico: SSID `LAB-DIPENDENTI`, banda `5 GHz`, canale `36`, segnale `78%`, autenticazione `WPA2-Enterprise`, velocità collegamento `433 Mbit/s`. Non presentarlo come misurazione del proprio PC. La percentuale del segnale non è un valore RSSI in dBm.
+
+**Facoltativo, solo per il blocco di posizione e se consentito sul dispositivo:** aprire la pagina Posizione con:
 
 ```powershell
 Start-Process 'ms-settings:privacy-location'
@@ -79,10 +97,11 @@ Rispondere in `consegna02.md`:
 
 - Quali dati descrivono il collegamento radio e quali la configurazione IP?
 - Perché il blocco di un’interrogazione WLAN non dimostra l’assenza di connettività?
+- Qual è la differenza tra servizio WLAN fermo, permesso di posizione negato e scheda Wi-Fi non rilevata? Quali verifiche aiutano a distinguerli?
 - Un segnale forte garantisce autenticazione riuscita e accesso a Internet? Motivare.
 - La velocità di collegamento equivale alla velocità di un download? Motivare.
 
-Riferimento: [Microsoft — Modifiche all’accesso Wi-Fi e alla posizione](https://learn.microsoft.com/it-it/windows/win32/nativewifi/wi-fi-access-location-changes).
+Riferimenti: [Microsoft — Modifiche all’accesso Wi-Fi e alla posizione](https://learn.microsoft.com/it-it/windows/win32/nativewifi/wi-fi-access-location-changes) e [Microsoft — Diagnosi delle connessioni wireless e ruolo di WlanSvc](https://learn.microsoft.com/en-us/troubleshoot/windows-client/networking/wireless-network-connectivity-issues-troubleshooting).
 
 ### Confronto prima e dopo la VPN
 
@@ -138,6 +157,8 @@ Lo schema prevede l’isolamento della rete ospiti (non verificato sulla rete re
 
 ## Troubleshooting rapido
 
+- Windows, `wlansvc` non in esecuzione: leggere lo stato con `Get-Service WlanSvc`; raccogliere i dati della connessione disponibile e usare il caso Wi-Fi sintetico.
+- Windows, caratteri come `├¿` nel file: problema di codifica; leggere il messaggio corrente a video e trascriverlo se necessario.
 - Windows, richiesta di posizione / errore 5: seguire il percorso alternativo; distinguere permessi del comando e stato della connessione.
 - SSID non visibile: verificare radio attiva, copertura e banda supportata.
 - Autenticazione fallita: non ripetere molte password; verificare profilo e credenziali con il docente.
