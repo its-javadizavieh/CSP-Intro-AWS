@@ -10,7 +10,7 @@ Raccogliere parametri Wi-Fi, progettare la separazione tra rete interna e ospiti
 
 ## Prerequisiti
 
-Computer con Wi-Fi. La VPN è opzionale e deve essere già autorizzata e configurata dall’organizzazione: non creare account, certificati o tunnel. Cartella di lavoro `Documenti/lab02-wifi-vpn`.
+Computer con Wi-Fi; su Windows usare PowerShell normale (non è richiesta l’esecuzione come amministratore). Se i dettagli Wi-Fi sono bloccati, usare il percorso alternativo descritto sotto. La VPN è opzionale e deve essere già autorizzata e configurata dall’organizzazione: non creare account, certificati o tunnel. Cartella di lavoro `Documenti/lab02-wifi-vpn`.
 
 ## Scenario
 
@@ -18,17 +18,17 @@ Un’organizzazione usa SSID separati per dipendenti e ospiti. Un dipendente rem
 
 ## Step (numerati)
 
-1. Creare `Documenti/lab02-wifi-vpn/consegna02.md`.
+1. Creare `Documenti/lab02-wifi-vpn/consegna02.md` e aprire il terminale nella cartella di lavoro; su Windows seguire i comandi dello svolgimento guidato. Eseguire solo i passi relativi al proprio sistema operativo.
 2. Ubuntu: aprire `Impostazioni -> Wi-Fi -> Ingranaggio della rete connessa`; annotare SSID, intensità segnale, frequenza, velocità collegamento, IPv4, gateway e DNS disponibili.
 3. macOS: tenere premuto `Option` e selezionare l’icona Wi-Fi; annotare SSID, BSSID, canale, RSSI, rumore, Tx Rate e standard PHY. Non riportare il BSSID nella consegna pubblica.
-4. Windows: aprire `Impostazioni -> Rete e Internet -> Wi-Fi -> Proprietà hardware`; poi PowerShell e usare `netsh wlan show interfaces > wifi.txt`.
+4. Windows: seguire il percorso guidato sotto: raccogliere configurazione IP e dati visibili nelle Impostazioni, poi provare `netsh wlan show interfaces`. Se compare la richiesta di posizione o l’errore 5, documentare il limite e proseguire con il percorso alternativo; non è necessario sbloccare il comando per completare il lab.
 5. Ubuntu, se NetworkManager è disponibile: `nmcli -f ACTIVE,SSID,SIGNAL,CHAN,RATE,SECURITY dev wifi > wifi.txt`.
 6. macOS: salvare manualmente in `wifi.txt` i valori mostrati dal menu diagnostico; non eseguire scansioni aggressive.
-7. In `consegna02.md`, creare la tabella `Parametro | Valore`: SSID anonimizzato, banda `2.4/5/6 GHz`, canale, intensità, metodo di sicurezza, IPv4, gateway.
+7. In `consegna02.md`, creare la tabella `Parametro | Valore | Fonte`: SSID anonimizzato, banda `2.4/5/6 GHz`, canale, intensità, metodo di sicurezza, IPv4, gateway e DNS. Indicare la fonte (comando, Impostazioni o caso sintetico); per i dati reali non leggibili scrivere `non disponibile`, senza inventare misure.
 8. Disegnare in `schema-wifi.md` questo percorso: `Client interno -> AP -> VLAN interna -> risorse interne/Internet` e `Client ospite -> AP -> VLAN ospiti -> solo Internet`.
 9. Usare i parametri logici: VLAN interna `10`, rete esempio `10.10.10.0/24`; VLAN ospiti `20`, rete esempio `10.10.20.0/24`; regola firewall inter-VLAN che nega dalla VLAN 20 alla VLAN 10; DNS approvato e accesso Internet previsti per entrambe. La sola presenza di SSID diversi non dimostra isolamento.
 10. Specificare che gli indirizzi sono sintetici e non devono essere applicati alla rete reale.
-11. Senza VPN, salvare il percorso a `example.com` in `percorso-senza-vpn.txt`: Ubuntu/macOS `traceroute example.com`; Windows `tracert example.com`.
+11. Senza VPN, salvare anche la configurazione IP e le rotte in `configurazione-senza-vpn.txt`, usando i comandi dello svolgimento guidato con questo nome file. Se una VPN istituzionale deve rimanere attiva, non disconnetterla: usare il caso sintetico per il confronto. Salvare il percorso a `example.com` in `percorso-senza-vpn.txt`: Ubuntu/macOS `traceroute example.com`; Windows `tracert -d example.com`.
 12. Se è disponibile una VPN autorizzata, aprire il client già installato, selezionare esclusivamente il profilo fornito dall’organizzazione e connettersi. Non cambiare server, protocollo, DNS o certificati.
 13. Salvare la nuova configurazione in `configurazione-con-vpn.txt`: Ubuntu `ip address && ip route`; macOS `ifconfig && netstat -rn`; Windows PowerShell `Get-NetIPConfiguration` e `Get-NetRoute`.
 14. Salvare il percorso con VPN in `percorso-con-vpn.txt` usando lo stesso comando del punto 11.
@@ -37,6 +37,70 @@ Un’organizzazione usa SSID separati per dipendenti e ospiti. Un dipendente rem
 17. Compilare due checklist: “SSID visibile ma autenticazione fallita” e “VPN connessa ma risorsa privata non raggiungibile”.
 
 ## Svolgimento guidato
+
+### Windows: raccogliere dati e interpretare l’errore WLAN
+
+Aprire **PowerShell** normale. Preparare la cartella Documenti, anche se reindirizzata su OneDrive. I comandi seguenti presumono che la VPN sia disconnessa; se deve restare attiva, sostituire `configurazione-senza-vpn.txt` con `configurazione-attuale.txt` e usare il caso sintetico per il confronto:
+
+```powershell
+$lab = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'lab02-wifi-vpn'
+New-Item -ItemType Directory -Path $lab -Force | Out-Null
+Set-Location $lab
+if (-not (Test-Path 'consegna02.md')) {
+    New-Item -ItemType File -Path 'consegna02.md' | Out-Null
+}
+Get-NetAdapter | Select-Object Name, InterfaceDescription, Status, LinkSpeed
+Get-NetIPConfiguration | Format-List * | Out-File configurazione-senza-vpn.txt -Encoding utf8
+Get-NetRoute | Format-Table -AutoSize | Out-String -Width 240 | Out-File configurazione-senza-vpn.txt -Append -Encoding utf8
+netsh wlan show interfaces 2>&1 | Out-File wifi.txt -Encoding utf8
+Get-Content wifi.txt
+```
+
+`Get-NetAdapter` identifica le schede e il loro stato; `Get-NetIPConfiguration` mostra indirizzi, gateway e DNS; `Get-NetRoute` mostra le rotte. Collegare i dati alla scheda Wi-Fi tramite nome/indice: una scheda Ethernet o VPN può avere indirizzi diversi. `LinkSpeed` è la velocità di collegamento dichiarata, non una misura della velocità Internet. Questi comandi non sostituiscono le misure radio di `netsh`.
+
+**Se `netsh` funziona:** annotare i valori disponibili nella tabella della consegna.
+
+**Se compare “autorizzazione di posizione” / `WlanQueryInterface` errore 5:** il sistema sta negando l’accesso ad alcune informazioni WLAN. I dati sulle reti vicine possono essere usati per ricavare la posizione. Il messaggio non dimostra che la scheda sia guasta, che la password Wi-Fi sia sbagliata o che Internet non funzioni. L’esecuzione come amministratore non sostituisce il consenso alla posizione.
+
+1. Conservare il messaggio in `wifi.txt` e annotare nella consegna: `Interrogazione WLAN bloccata dai permessi; connettività da verificare separatamente`.
+2. Aprire `Impostazioni -> Rete e Internet -> Wi-Fi`, quindi le proprietà della rete connessa o `Proprietà hardware` (le voci variano con la versione). Trascrivere in `wifi.txt` i valori disponibili, senza BSSID/MAC; mantenere il messaggio già salvato. Per i campi mancanti scrivere `non disponibile`.
+3. Completare comunque indirizzo IP, gateway e DNS usando la configurazione salvata. Non dedurre banda, canale o sicurezza dal solo indirizzo IP.
+4. Per esercitarsi sui parametri radio mancanti, analizzare **separatamente** questo caso sintetico: SSID `LAB-DIPENDENTI`, banda `5 GHz`, canale `36`, segnale `78%`, autenticazione `WPA2-Enterprise`, velocità collegamento `433 Mbit/s`. Non presentarlo come misurazione del proprio PC. La percentuale del segnale non è un valore RSSI in dBm.
+
+**Facoltativo, solo se consentito sul dispositivo:** aprire la pagina Posizione con:
+
+```powershell
+Start-Process 'ms-settings:privacy-location'
+```
+
+È la versione PowerShell del comando `start ms-settings:privacy-location` indicato da Windows. Il comando apre solo le Impostazioni. Se consentito dal docente e dalle regole del dispositivo, annotare le impostazioni iniziali, abilitare i servizi di posizione e l’accesso richiesto dalle opzioni disponibili, quindi riprovare `netsh wlan show interfaces`. Se le opzioni sono gestite dall’organizzazione o l’errore persiste, usare il percorso alternativo; non cambiare criteri, registro o privilegi. Il lab è completo anche senza questa operazione.
+
+Rispondere in `consegna02.md`:
+
+- Quali dati descrivono il collegamento radio e quali la configurazione IP?
+- Perché il blocco di un’interrogazione WLAN non dimostra l’assenza di connettività?
+- Un segnale forte garantisce autenticazione riuscita e accesso a Internet? Motivare.
+- La velocità di collegamento equivale alla velocità di un download? Motivare.
+
+Riferimento: [Microsoft — Modifiche all’accesso Wi-Fi e alla posizione](https://learn.microsoft.com/it-it/windows/win32/nativewifi/wi-fi-access-location-changes).
+
+### Confronto prima e dopo la VPN
+
+Su Windows, dalla stessa cartella, prima della VPN:
+
+```powershell
+tracert -d example.com 2>&1 | Out-File percorso-senza-vpn.txt -Encoding utf8
+```
+
+Dopo aver connesso esclusivamente la VPN già autorizzata:
+
+```powershell
+Get-NetIPConfiguration | Format-List * | Out-File configurazione-con-vpn.txt -Encoding utf8
+Get-NetRoute | Format-Table -AutoSize | Out-String -Width 240 | Out-File configurazione-con-vpn.txt -Append -Encoding utf8
+tracert -d example.com 2>&1 | Out-File percorso-con-vpn.txt -Encoding utf8
+```
+
+Confrontare interfacce, indirizzi e rotte nei due file di configurazione. `-d` evita la risoluzione dei nomi dei router intermedi; `example.com` richiede comunque DNS. Gli asterischi indicano risposte mancanti entro il timeout, non dimostrano da soli un guasto. Un percorso Internet invariato è compatibile con uno split tunnel: il solo `tracert` non prova se il traffico verso la rete privata passa nella VPN. Valutare IPv4 e IPv6 separatamente quando presenti e scrivere `non determinabile` se le rotte non bastano.
 
 Percorso senza VPN: aggiungere `> percorso-senza-vpn.txt 2>&1` al comando del punto 11; dopo la connessione usare `> percorso-con-vpn.txt 2>&1`. Configurazione Linux: `ip address > configurazione-con-vpn.txt` e `ip route >> configurazione-con-vpn.txt`; macOS: `ifconfig > configurazione-con-vpn.txt` e `netstat -rn >> configurazione-con-vpn.txt`; PowerShell: `Get-NetIPConfiguration > configurazione-con-vpn.txt` e `Get-NetRoute >> configurazione-con-vpn.txt`.
 
@@ -64,14 +128,17 @@ Le prove sono di sola lettura. Non mostrare password, chiavi, certificati, BSSID
 
 ## Output atteso
 
-`consegna02.md`, `wifi.txt`, `schema-wifi.md`, `percorso-senza-vpn.txt` e, in alternativa, `percorso-con-vpn.txt` oppure `caso-vpn-sintetico.md`.
+`consegna02.md`, `wifi.txt`, `schema-wifi.md`, `configurazione-senza-vpn.txt`, `percorso-senza-vpn.txt` e, in alternativa, la coppia `configurazione-con-vpn.txt` / `percorso-con-vpn.txt` oppure `caso-vpn-sintetico.md`. Se la VPN istituzionale non può essere disconnessa, indicare che le misure senza VPN non sono disponibili e consegnare il confronto sintetico.
+
+`wifi.txt` può contenere il messaggio di errore e i dati trascritti dalle Impostazioni: non è richiesto un output `netsh` riuscito. Prima della consegna anonimizzare anche i file di testo (SSID reali, BSSID/MAC, nomi macchina, IP pubblici e dettagli istituzionali).
 
 ## Checkpoint
 
-La rete ospiti è separata dalla rete interna; il tunnel ha due estremi identificati; la checklist distingue segnale, autenticazione, indirizzamento, rotta e autorizzazione.
+Lo schema prevede l’isolamento della rete ospiti (non verificato sulla rete reale); i dati misurati sono distinti da quelli sintetici e dai dati non disponibili; il tunnel ha due estremi identificati; la checklist distingue segnale, autenticazione, indirizzamento, rotta e autorizzazione.
 
 ## Troubleshooting rapido
 
+- Windows, richiesta di posizione / errore 5: seguire il percorso alternativo; distinguere permessi del comando e stato della connessione.
 - SSID non visibile: verificare radio attiva, copertura e banda supportata.
 - Autenticazione fallita: non ripetere molte password; verificare profilo e credenziali con il docente.
 - VPN connessa ma destinazione irraggiungibile: controllare rotta verso `10.20.0.0/16`, DNS e autorizzazione.
@@ -79,4 +146,4 @@ La rete ospiti è separata dalla rete interna; il tunnel ha due estremi identifi
 
 ## Cleanup obbligatorio
 
-Disconnettere soltanto la VPN usata per il test, senza eliminare il profilo istituzionale. Dimenticare eventuali SSID di prova soltanto se creati per il lab. Eliminare screenshot contenenti BSSID, IP pubblici, utenti o certificati; conservare la consegna anonimizzata.
+Se sono state modificate per la prova, ripristinare le impostazioni di posizione annotate all’inizio. Disconnettere soltanto la VPN usata per il test, senza eliminare il profilo istituzionale. Dimenticare eventuali SSID di prova soltanto se creati per il lab. Eliminare screenshot contenenti BSSID, IP pubblici, utenti o certificati; conservare la consegna anonimizzata.
