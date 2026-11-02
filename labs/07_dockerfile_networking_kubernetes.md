@@ -171,7 +171,7 @@ Nella Console **us-east-1**, aprire **EC2 → Instances → Launch instances**. 
 | Campo                | Valore                                                                               |
 | -------------------- | ------------------------------------------------------------------------------------ |
 | Nome                 | `lab07-SIGLA`                                                                        |
-| AMI                  | **Ubuntu Server 24.04 LTS ufficiale Canonical**, x86_64, con SSM Agent verificato    |
+| AMI                  | **Ubuntu Server 26.04 LTS ufficiale Canonical**, x86_64, con SSM Agent verificato    |
 | Tipo                 | `t3.medium`, On-Demand, tenancy default                                              |
 | Disco                | 20 GiB gp3, Delete on termination attivo                                             |
 | Rete                 | VPC `lab07-SIGLA-vpc`, subnet `lab07-SIGLA-public`; Auto-assign public IP **Enable** |
